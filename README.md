@@ -64,7 +64,7 @@ cd Online-Mirror
 2.  **KV 命名空间 (频率限制 - 可选)**：
     - 如果你需要防刷功能，请创建一个名为 `online-photos-limit-24-hour` 的 KV 空间。
     - _提示：如果不配置 KV，系统后台将自动关闭频率限制，所有人均可无限次访问。_
-3.  **配置文件绑定 **：
+3.  **配置文件绑定**：
     - 打开项目根目录下的 `wrangler.toml`。
     - 将 `[[r2_buckets]]` 下的 `bucket_name` 设为你的 R2 桶名。
     - 将 `[[kv_namespaces]]` 下的 `id` 替换为你的真实 KV ID（如果启用了限流）。
