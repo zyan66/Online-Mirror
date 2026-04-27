@@ -5,6 +5,10 @@ function getClientIP(request) {
   return request.headers.get("cf-pseudo-ipv4") || request.headers.get("cf-connecting-ip") || "unknown";
 }
 
+function isValidId(id) {
+  return /^[a-zA-Z0-9]{1,5}$/.test(id);
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -73,7 +77,8 @@ export default {
           serverDate: today,
           country: geo.country,
           location: geo,
-          engine: geo.engine
+          engine: geo.engine,
+          version: env.SYSTEM_VERSION || "9.2.1"
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -84,7 +89,7 @@ export default {
     const selfOrigin = `${url.protocol}//${url.host}`;
 
     // 1. 系统通道优先度：API 与 Proxy 资源代理
-    if (path.startsWith("/api/")) {
+    if (path === "/api/ping" || path === "/ping" || path === "/api/stats") {
       return handleApi(request, env, ctx);
     }
 
@@ -155,6 +160,13 @@ async function handleUpload(request, env, corsHeaders) {
 
     if (!id || !image) {
       return new Response(JSON.stringify({ error: "参数缺失" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!isValidId(id)) {
+      return new Response(JSON.stringify({ error: "ID格式不合法 (仅限5位以内字母数字)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -245,6 +257,13 @@ async function handleGetPhotos(request, env, corsHeaders) {
 
     if (!id) {
       return new Response(JSON.stringify({ error: "ID参数缺失" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!isValidId(id)) {
+      return new Response(JSON.stringify({ error: "ID格式不合法" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -379,6 +398,13 @@ async function handleDeletePhotos(request, env, corsHeaders) {
 
     if (!id) {
       return new Response(JSON.stringify({ error: "ID参数缺失" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!isValidId(id)) {
+      return new Response(JSON.stringify({ error: "ID格式不合法" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -645,14 +671,6 @@ async function handleMirror(request, env, ctx, explicitTarget = null, cachedId =
 
   // 兜底补全与 URL 合规化
   if (targetUrl) {
-    // 关键修正：处理可能存在的双重 URI 编码（针对像 https%3A%2F%2F 的情况）
-    if (targetUrl.includes("%")) {
-      try { targetUrl = decodeURIComponent(targetUrl).trim(); } catch (e) { }
-    }
-    if (id && id.includes("%")) {
-      try { id = decodeURIComponent(id).trim(); } catch (e) { }
-    }
-
     // 移除多余的、重复的协议头（处理 https://https://... 的情况）
     targetUrl = targetUrl.replace(/^(https?:\/\/)+/i, "$1");
 
@@ -662,8 +680,8 @@ async function handleMirror(request, env, ctx, explicitTarget = null, cachedId =
     }
 
     // 自动分配 ID
-    if (!id || id === "null" || id === "") {
-      id = "guest_" + Math.random().toString(36).substring(2, 6);
+    if (!id || id === "null" || id === "" || !isValidId(id)) {
+      id = Math.random().toString(36).substring(2, 7); // 生成5位内随机ID
     }
   }
 
@@ -880,7 +898,7 @@ async function handleMirror(request, env, ctx, explicitTarget = null, cachedId =
         if (!url || typeof url !== 'string' || url.startsWith('blob:') || url.startsWith('data:')) return url;
         if (url.startsWith('//')) url = location.protocol + url;
         try {
-          const u = new URL(url, location.href);
+          const u = new URL(url, document.baseURI || location.href);
           if (u.origin !== SELF_ORIGIN && !u.host.includes('google-analytics') && !u.host.includes('doubleclick')) {
             if (u.host !== TARGET_HOST) {
                return "/proxy/" + u.host + u.pathname + u.search + u.hash;
@@ -896,7 +914,7 @@ async function handleMirror(request, env, ctx, explicitTarget = null, cachedId =
         if (!url || typeof url !== 'string' || url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('javascript:') || url === '#') return url;
         if (url.startsWith('//')) url = location.protocol + url;
         try {
-          const u = new URL(url, location.href);
+          const u = new URL(url, document.baseURI || location.href);
           // 已经是镜像站内部路径，不需要重写
           if (u.origin === SELF_ORIGIN) return url;
           // 跨域导航 → 通过 /v 重新进入镜像隧道
@@ -922,7 +940,7 @@ async function handleMirror(request, env, ctx, explicitTarget = null, cachedId =
         const href = a.getAttribute('href');
         if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
         try {
-          const abs = new URL(href, location.href);
+          const abs = new URL(href, document.baseURI || location.href);
           if (abs.origin !== SELF_ORIGIN) {
             e.preventDefault();
             e.stopPropagation();
@@ -939,7 +957,7 @@ async function handleMirror(request, env, ctx, explicitTarget = null, cachedId =
         // 强制劫持所有表单，无论相对还是绝对路径
         const action = form.getAttribute('action') || '';
         try {
-          const abs = new URL(action, location.href);
+          const abs = new URL(action, document.baseURI || location.href);
           e.preventDefault();
           
           // 整合 Method 与 Params
@@ -993,7 +1011,7 @@ async function handleMirror(request, env, ctx, explicitTarget = null, cachedId =
               const h = a.getAttribute('href');
               if (!h || h.startsWith('#') || h.startsWith('javascript:')) return;
               try {
-                const abs = new URL(h, location.href);
+                const abs = new URL(h, document.baseURI || location.href);
                 if (abs.origin !== SELF_ORIGIN) a.setAttribute('href', wrapNav(abs.href));
               } catch(e3) {}
             });
@@ -1003,7 +1021,7 @@ async function handleMirror(request, env, ctx, explicitTarget = null, cachedId =
               const act = f.getAttribute('action');
               if (!act) return;
               try {
-                const abs = new URL(act, location.href);
+                const abs = new URL(act, document.baseURI || location.href);
                 if (abs.origin !== SELF_ORIGIN) f.setAttribute('action', wrapNav(abs.href));
               } catch(e4) {}
             });
@@ -1050,19 +1068,13 @@ async function handleMirror(request, env, ctx, explicitTarget = null, cachedId =
     </script>
     `;
 
-    // 3. HTML / JS 动态重组 (关键修复：base 标签必须指向本域，防止相对路径逃逸)
+    // 3. HTML / JS 动态重组 (关键修复：base 标签必须指向本域子路径，防止相对路径逃逸)
     if (isHtml) {
-      const baseTag = `<base href="/">`;
+      const targetPathDir = new URL(targetUrl).pathname.replace(/\/[^\/]*$/, '/');
+      const baseTag = `<base href="${targetPathDir}">`;
       const headInjection = `${baseTag}${shouldCapture ? forceStyle + captureScript : ""}`;
       html = html.replace(/<head>/i, `<head>${headInjection}`);
       html = html.replace(/<\/body>/i, `${shouldCapture ? forceHtml : ""}</body>`);
-    } else if (contentType.includes("javascript")) {
-      // 对 JS 文件也进行域名漂移，确保其内部硬编码的 URL 也走隧道
-      staticDomains.forEach(domain => {
-        const regex = new RegExp(`(https?:)?//${domain}`, 'g');
-        html = html.replace(regex, `${currentOrigin}/proxy/${domain}`);
-      });
-      html = html.replace(/(https?:)?\/\/www\.baidu\.com/g, "");
     }
 
     // 5. 最终响应处理：应用 Cookie 逻辑并清理安全头
@@ -1157,6 +1169,11 @@ function cleanCookieHeaders(resHeaders) {
 async function handleApi(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname;
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
 
   if (path === "/api/ping" || path === "/ping") {
     return new Response(JSON.stringify({ status: "ok", time: new Date().toISOString() }), {
@@ -1241,10 +1258,7 @@ async function handleStatic(request, env, filename) {
 function wrapNav(targetUrl, selfOrigin, id = "") {
   if (!targetUrl) return "";
   try {
-    const raw = id ? `${id}|${targetUrl}` : targetUrl;
-    // 使用 encodeURIComponent 确保支持中文 ID
-    const b64 = btoa(encodeURIComponent(raw));
-    return `${selfOrigin}/v?d=${b64}&m=0`;
+    return `${selfOrigin}/v?url=${encodeURIComponent(targetUrl)}&id=${encodeURIComponent(id)}&m=0`;
   } catch (e) {
     return targetUrl;
   }

@@ -733,8 +733,8 @@
           <div style="text-align: center; padding: 40px 20px;">
             <h3 style="color: #666; margin-bottom: 20px;">📸 查看照片</h3>
             <p style="color: #999; margin-bottom: 30px;">请输入 ID 查看照片</p>
-            <form onsubmit="event.preventDefault(); window.location.href='view.html?id=' + document.getElementById('view-id').value;">
-              <input id="view-id" type="text" placeholder="请输入 ID" 
+            <form onsubmit="event.preventDefault(); var vid=document.getElementById('view-id').value; if(/^[a-zA-Z0-9]{1,5}$/.test(vid)){ window.location.href='view.html?id=' + vid; } else { alert('ID格式错误：仅限5位以内字母或数字'); }">
+              <input id="view-id" type="text" placeholder="请输入 ID" maxlength="5"
                 style="width: 80%; max-width: 300px; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px;" required>
               <br><br>
               <button id="view-submit-btn" type="submit" 
