@@ -2,11 +2,11 @@ name = "online-mirror"
 main = "worker.js"
 compatibility_date = "2024-01-01"
 
-[routes]
+[[routes]]
 pattern = "online.a-i.indevs.in"
 custom_domain = true
 
-[r2_buckets]
+[[r2_buckets]]
 binding = "PHOTO_BUCKET"
 bucket_name = "photos"
 
@@ -14,7 +14,7 @@ bucket_name = "photos"
 directory = "./public"
 binding = "ASSETS"
 
-[kv_namespaces]
+[[kv_namespaces]]
 binding = "KV_DATABASE"
 id = "1"
 
