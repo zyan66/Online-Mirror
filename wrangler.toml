@@ -21,11 +21,3 @@ id = "1"
 [vars]
 WHITELIST_IP = "149.104.139.142,154.19.243.9" 
 SYSTEM_VERSION = "9.2.1"
-
-[build]
-  # 排除node_modules及所有二进制文件
-  upload.exclude = [
-    "node_modules/**",
-    "**/*.bin",
-    "**/bin/**"
-  ]
