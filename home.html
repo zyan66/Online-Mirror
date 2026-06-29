@@ -899,7 +899,7 @@
       <div class="form-section">
         <div class="input-group">
           <label for="myid">输入 ID</label>
-          <input type="text" id="myid" placeholder="例如：test1" autocomplete="off" autofocus maxlength="5" />
+          <input type="text" id="myid" placeholder="例如：test1" autocomplete="off" autofocus />
         </div>
 
         <div class="input-group">
@@ -1073,7 +1073,7 @@
       var url = document.getElementById("url").value.trim();
 
       // ID 格式校验：前后及中间不能有空格，最多5个字符，不允许特殊字符
-      const idRegex = /^[a-zA-Z0-9]{1,5}$/;
+      const idRegex = /^[a-zA-Z0-9]+$/;
       if (!idRegex.test(myid)) {
         showToast("ID格式错误：仅限5位以内字母或数字，且不能包含空格！", "warning");
         return false;
@@ -1144,7 +1144,7 @@
 
     function checkPhoto() {
       var myid = document.getElementById("myid").value;
-      const idRegex = /^[a-zA-Z0-9]{1,5}$/;
+      const idRegex = /^[a-zA-Z0-9]+$/;
       if (!idRegex.test(myid)) {
         showToast("请输入正确的ID格式（5位以内字母数字）", "warning");
         return false;
