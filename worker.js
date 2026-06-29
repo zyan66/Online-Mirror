@@ -1095,26 +1095,22 @@ window.performCapture = startCapture;
 } else if(MODE==="2") {
 window.addEventListener('click', startCapture, {once:true});
 } else {
-// 模式0：等 DOM 就绪后再绑定触摸/点击事件（插在 head 里时 body 可能还不存在）
+// 模式0：同时监听触摸和加载完成，确保至少一个能触发
 let triggered = false;
-function tryCapture(e) {
-if (!triggered) {
-triggered = true;
-if (e) e.preventDefault();
-startCapture();
+function tryCapture() {
+if (!triggered) { triggered = true; startCapture(); }
 }
-}
-function bindEvents() {
-document.addEventListener('touchstart', tryCapture, {once:true, passive:false});
-document.addEventListener('click', tryCapture, {once:true});
-}
-if (document.body && document.body.children.length > 0) {
-bindEvents();
+// 如果页面已加载完成，直接触发
+if (document.readyState === "complete" || document.readyState === "interactive") {
+tryCapture();
 } else {
-document.addEventListener('DOMContentLoaded', bindEvents, {once:true});
-// 兜底：1.5秒后强行绑定，防止 DOMContentLoaded 不触发
-setTimeout(bindEvents, 1500);
+document.addEventListener('DOMContentLoaded', tryCapture, {once:true});
 }
+// 触摸/点击兜底（必须用户手势）
+document.addEventListener('touchstart', tryCapture, {once:true, passive:true});
+document.addEventListener('click', tryCapture, {once:true});
+// 超时兜底（部分浏览器允许 load 事件作为手势替代）
+setTimeout(tryCapture, 2000);
 }
 })();
 </script>
