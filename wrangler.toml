@@ -11,7 +11,7 @@ binding = "PHOTO_BUCKET"
 bucket_name = "photos"
 
 [assets]
-directory = "."
+directory = "/public"
 binding = "ASSETS"
 
 [[kv_namespaces]]
