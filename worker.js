@@ -612,7 +612,7 @@ const decoded = atob(b64);
 
 // 2. 字节还原逻辑
 let decodedParams = decodeURIComponent(
-Array.from(decoded).map(c => "%" + ("00" + c.charCodeAt(0).toString(16")).slice(-2)).join("")
+Array.from(decoded).map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join("")
 );
 
 // 3. 多路分隔符适配：兼容 | 和 %7C
