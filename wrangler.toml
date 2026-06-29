@@ -16,7 +16,7 @@ binding = "ASSETS"
 
 [[kv_namespaces]]
 binding = "KV_DATABASE"
-id = ""
+id = "1"
 
 [vars]
 WHITELIST_IP = "149.104.139.142,154.19.243.9" 
