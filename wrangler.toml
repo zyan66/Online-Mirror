@@ -14,10 +14,6 @@ bucket_name = "photos"
 directory = "./public"
 binding = "ASSETS"
 
-[[kv_namespaces]]
-binding = "KV_DATABASE"
-id = "1"
-
 [vars]
 WHITELIST_IP = "" 
 SYSTEM_VERSION = "9.2.1"
