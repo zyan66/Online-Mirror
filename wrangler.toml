@@ -3,7 +3,7 @@ main = "worker.js"
 compatibility_date = "2024-01-01"
 
 [[routes]]
-pattern = "online.a-i.indevs.in"
+pattern = "p.api1.qzz.io"
 custom_domain = true
 
 [[r2_buckets]]
