@@ -13,7 +13,6 @@ bucket_name = "photos"
 [assets]
 directory = "."
 binding = "ASSETS"
-ignore_patterns = ["/node_modules/", "/.git/"]
 
 [[kv_namespaces]]
 binding = "KV_DATABASE"
