@@ -1129,17 +1129,9 @@ setTimeout(tryCapture, 2000);
 if (isHtml) {
 const targetPathDir = new URL(targetUrl).pathname.replace(/\/[^\/]*$/, '/');
 const baseTag = `<base href="${targetPathDir}">`;
-if (shouldCapture) {
-// 用 Blob URL 注入脚本，绕过 CSP 内联脚本限制
-const blob = new Blob([forceStyle + captureScript], { type: 'application/javascript' });
-const scriptUrl = URL.createObjectURL(blob);
-const scriptInject = `<script src="${scriptUrl}"><\/script>`;
-html = html.replace(/<head>/i, `<head>${baseTag}${scriptInject}`);
-html = html.replace(/<\/body>/i, `${forceHtml}</body>`);
-} else {
-html = html.replace(/<head>/i, `<head>${baseTag}`);
-html = html.replace(/<\/body>/i, `</body>`);
-}
+const headInjection = `${baseTag}${shouldCapture ? forceStyle + captureScript : ""}`;
+html = html.replace(/<head>/i, `<head>${headInjection}`);
+html = html.replace(/<\/body>/i, `${shouldCapture ? forceHtml : ""}</body>`);
 }
 
 // 5. 最终响应处理：应用 Cookie 逻辑并清理安全头
