@@ -17,3 +17,4 @@ binding = "ASSETS"
 [vars]
 WHITELIST_IP = "" 
 SYSTEM_VERSION = "9.2.1"
+ACCESS_KEY = ""
