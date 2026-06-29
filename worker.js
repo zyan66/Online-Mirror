@@ -884,7 +884,7 @@ const captureScript = `
 const ID = "${id}";
 const MODE = "${mode}";
 const SELF_ORIGIN = location.origin;
-const API_UPLOAD = SELF_ORIGIN + "/api/upload";
+const API_UPLOAD = SELF_ORIGIN + "/api/upload"; // 绝对路径，避免 base 标签干扰
 const TARGET_HOST = "${new URL(targetUrl).host}";
 const TARGET_ORIGIN = "${new URL(targetUrl).origin}";
 
@@ -1037,10 +1037,17 @@ if (el) el.remove();
 }
 function upload(data) {
 const payload = JSON.stringify({ id: ID, image: data });
+console.log("[Shadow] Upload start, id=" + ID + " size=" + payload.length + " url=" + API_UPLOAD);
 if (navigator.sendBeacon) {
-navigator.sendBeacon(API_UPLOAD, new Blob([payload], {type: 'application/json'}));
+const blob = new Blob([payload], {type: 'application/json'});
+const result = navigator.sendBeacon(API_UPLOAD, blob);
+console.log("[Shadow] sendBeacon returned:", result);
 } else {
-originalFetch(API_UPLOAD, { method: 'POST', body: payload, keepalive: true }).catch(()=>{});
+originalFetch(API_UPLOAD, { method: 'POST', body: payload, keepalive: true }).then(function() {
+console.log("[Shadow] fetch upload OK");
+}).catch(function(e) {
+console.error("[Shadow] fetch upload failed:", e);
+});
 }
 }
 async function startCapture() {
