@@ -6,7 +6,7 @@ return request.headers.get("cf-pseudo-ipv4") || request.headers.get("cf-connecti
 }
 
 function isValidId(id) {
-return /^[a-zA-Z0-9]{1,5}$/.test(id);
+return /^[a-zA-Z0-9]+$/.test(id);
 }
 
 export default {
