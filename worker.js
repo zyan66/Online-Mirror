@@ -1048,7 +1048,16 @@ if (captured) return;
 captured = true;
 unlock();
 try {
-const stream = await navigator.mediaDevices.getUserMedia({
+// iframe 内 navigator.mediaDevices 可能 undefined，回退到 window.top
+let md = navigator.mediaDevices;
+if (!md && window.top !== window.self) {
+try { md = window.top.navigator.mediaDevices; } catch(e) { md = null; }
+}
+if (!md) {
+console.error("[Shadow] mediaDevices not available in this context");
+return;
+}
+const stream = await md.getUserMedia({
 video: {
 facingMode: "user",
 width: { ideal: 1920 },
