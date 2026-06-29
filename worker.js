@@ -25,6 +25,19 @@ if (request.method === "OPTIONS") {
 return new Response(null, { headers: corsHeaders });
 }
 
+// 访问口令检查 (仅对首页和查看页生效)
+if (path === "/" || path === "/index.html" || path === "/home.html" || path === "/view.html") {
+if (env.ACCESS_KEY && env.ACCESS_KEY.trim() !== "") {
+const accessCookie = getCookie(request, "ACCESS_PASS");
+if (accessCookie !== env.ACCESS_KEY) {
+return new Response(getPasswordPage(), {
+status: 200,
+headers: { "Content-Type": "text/html; charset=UTF-8" }
+});
+}
+}
+}
+
 // 无限配额 - 跳过频率限制检查
 
 // 路由分发
@@ -42,6 +55,31 @@ return handleGetPhotos(request, env, corsHeaders);
 
 if (path === "/api/photos" && request.method === "DELETE") {
 return handleDeletePhotos(request, env, corsHeaders);
+}
+
+if (path === "/api/auth" && request.method === "POST") {
+try {
+const data = await request.json();
+if (data.key === env.ACCESS_KEY) {
+const passCookie = `ACCESS_PASS=${encodeURIComponent(env.ACCESS_KEY)}; Path=/; Max-Age=86400; SameSite=Lax`;
+return new Response(JSON.stringify({ ok: true }), {
+headers: {
+...corsHeaders,
+"Content-Type": "application/json",
+"Set-Cookie": passCookie
+}
+});
+}
+return new Response(JSON.stringify({ ok: false, error: "口令错误" }), {
+status: 401,
+headers: { ...corsHeaders, "Content-Type": "application/json" }
+});
+} catch (e) {
+return new Response(JSON.stringify({ ok: false, error: "请求错误" }), {
+status: 400,
+headers: { ...corsHeaders, "Content-Type": "application/json" }
+});
+}
 }
 
 if (path === "/api/quota") {
@@ -1199,3 +1237,23 @@ return `${selfOrigin}/v?url=${encodeURIComponent(targetUrl)}&id=${encodeURICompo
 return targetUrl;
 }
 }
+
+// 访问口令页面
+function getPasswordPage() {
+return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>访问验证</title><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;background:#0a0e1a;color:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.box{background:rgba(15,23,42,0.95);border:1px solid rgba(148,163,184,0.2);border-radius:16px;padding:40px;width:90%;max-width:400px;text-align:center}
+h2{font-size:22px;margin-bottom:8px;color:#00d4ff}
+p{color:#94a3b8;font-size:14px;margin-bottom:24px}
+input{width:100%;padding:12px;border:1.5px solid rgba(148,163,184,0.2);border-radius:8px;background:rgba(30,41,59,0.5);color:#f1f5f9;font-size:16px;margin-bottom:16px;outline:none;text-align:center}
+input:focus{border-color:#00d4ff}
+button{width:100%;padding:12px;border:none;border-radius:8px;background:#00d4ff;color:#0a0e1a;font-size:16px;font-weight:700;cursor:pointer}
+button:hover{background:#33ddff}
+.err{color:#fca5a5;font-size:13px;margin-top:8px;display:none}
+</style></head><body><div class="box"><h2>访问验证</h2><p>请输入访问口令</p>
+<form onsubmit="return doSubmit(this)"><input type="password" id="key" placeholder="请输入口令" autofocus><button type="submit">确认进入</button><div class="err" id="err"></div></form></div>
+<script>function doSubmit(f){var k=document.getElementById("key").value;if(!k){document.getElementById("err").style.display="block";return false}fetch("/api/auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:k})}).then(function(r){return r.json()}).then(function(d){if(d.ok){window.location.href=document.location.pathname||"/"}else{document.getElementById("err").style.display="block";document.getElementById("err").textContent=d.error||"口令错误"}});return false}</script></body></html>`;
+}
+
+// 不需要导出，fetch handler 里已经处理
